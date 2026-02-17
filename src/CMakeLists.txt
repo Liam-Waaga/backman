@@ -10,6 +10,7 @@ add_subdirectory(target)
 add_executable(
   backman
   main.cpp
+  utils.cpp
 )
 
 target_link_libraries(

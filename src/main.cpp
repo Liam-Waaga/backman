@@ -21,10 +21,10 @@
  * SOFTWARE.
 */
 
-
 #include "parser/parser.hpp"
 #include "target/target.hpp"
 #include "log/log.h"
+#include "utils.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -35,14 +35,8 @@
 
 namespace fs = std::filesystem;
 
-struct Options {
-  fs::path config_file = "";
-  int             jobs = 1;
-  int        verbosity = 0;
-  fs::path     destdir = "";
-  bool      keep_going = false;
-  std::vector<std::string> targets;
-} options;
+Options options;
+INI_Parser::INI_Data parsed_config;
 
 static constexpr const char * const version_string = VERSION " built from " GIT_HASH;
 
@@ -60,10 +54,6 @@ static constexpr char const * const help_format =
 "       --keep-going      Keep going after an errored target\n"
 ;
 
-fs::path resolve_path_with_environment(std::string path) {
-  (void) path;
-  return "";
-}
 
 /* i hate argument parsing */
 void parse_args(int argc, char **argv) {
@@ -184,5 +174,12 @@ int main(int argc, char **argv) {
   );
 #endif
 
-  // auto config_data = INI_Parser::ini_parse(options.config_file);
+  parsed_config = INI_Parser::ini_parse(options.config_file);
+
+
+  for (INI_Parser::INI_Section section : parsed_config) {
+    if (section.get_section_name() == "target") {
+      Target t(section);
+    }
+  }
 }

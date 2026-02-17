@@ -23,7 +23,56 @@
 
 #pragma once
 
+#include "parser/parser.hpp"
+
+
+#include <filesystem>
+#include <vector>
+
+namespace fs = std::filesystem;
 
 class Target {
+  public:
+
+  Target(INI_Parser::INI_Section target_config);
+
+  /* begins execution of the target */
+  void run_main();
+  int wait_main();
+  bool run_before_hooks();
+  bool run_after_hooks();
+
+  class SystemCommand {
+    public:
+    SystemCommand(const std::string &command);
+
+    void run();
+    /* returns -1 internal error, otherwise returns the exit code of the command */
+    int wait();
+
+    bool has_exited();
+
+    private:
+    bool        failed = false; /* error other than command (fork failed) */
+    bool           ran = false;
+    bool        exited = false;
+    int      exit_code = 0;
+    pid_t         cpid = -1;
+    std::string command;
+  };
+
+  private:
+  fs::path                           path;
+  bool                               elavated;
+  std::string                        name;
+  fs::path                           dest;
+  std::string                        compress_level;
+  std::string                        compress_program;
+  bool                               encrypt;
+  std::vector<SystemCommand>         before_hooks;
+  std::vector<SystemCommand>         end_hooks;
+  std::vector<std::filesystem::path> excludes;
+
+  static bool run_hooks(std::vector<SystemCommand> hooks);
 
 };
