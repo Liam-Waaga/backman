@@ -51,9 +51,9 @@ void set_loglevel(LOGLEVEL level);
 /* internal function for logging, not meant to be used by anything except through the macro */
 void _log(char const * const file, int linenumber, char const * const function, LOGLEVEL level, char const * const format, ...);
 
-const char *safe_format(const char *format, ...);
+char *safe_format(const char *format, ...);
 
-const char *vsafe_format(const char *format, va_list args);
+char *vsafe_format(const char *format, va_list args);
 
 
 #ifdef __cplusplus

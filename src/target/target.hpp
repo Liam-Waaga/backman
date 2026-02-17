@@ -27,6 +27,7 @@
 
 
 #include <filesystem>
+#include <sys/types.h>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -38,9 +39,9 @@ class Target {
 
   /* begins execution of the target */
   void run_main();
-  int wait_main();
+  int  wait_main();
   bool run_before_hooks();
-  bool run_after_hooks();
+  bool run_end_hooks();
 
   class SystemCommand {
     public:
@@ -48,17 +49,16 @@ class Target {
 
     void run();
     /* returns -1 internal error, otherwise returns the exit code of the command */
-    int wait();
-
+    int  wait();
     bool has_exited();
 
     private:
-    bool        failed = false; /* error other than command (fork failed) */
-    bool           ran = false;
-    bool        exited = false;
-    int      exit_code = 0;
-    pid_t         cpid = -1;
-    std::string command;
+    bool         failed = false; /* error other than command (fork failed) */
+    bool            ran = false;
+    bool         exited = false;
+    int       exit_code = 0;
+    pid_t          cpid = -1;
+    std::string command = "";
   };
 
   private:
@@ -69,10 +69,15 @@ class Target {
   std::string                        compress_level;
   std::string                        compress_program;
   bool                               encrypt;
+  bool                               one_file_system;
+  std::string                        passphrase;
   std::vector<SystemCommand>         before_hooks;
   std::vector<SystemCommand>         end_hooks;
   std::vector<std::filesystem::path> excludes;
+  std::vector<pid_t>                 children;
+  // std::vector<std::string>           tar_flags;
 
   static bool run_hooks(std::vector<SystemCommand> hooks);
+  std::string get_file_name();
 
 };

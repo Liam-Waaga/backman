@@ -50,14 +50,14 @@ void _log(char const * file, int linenumber, char const * const function, LOGLEV
 }
 
 /* returns a malloc'ed string which needs to be free'd */
-const char *safe_format(const char *format, ...) {
+char *safe_format(const char *format, ...) {
 	va_list args;
 	va_start(args, format);
 
 	return vsafe_format(format, args);
 }
 
-const char *vsafe_format(const char *format, va_list args) {
+char *vsafe_format(const char *format, va_list args) {
 	/* + 1 for null terminator */
 	int size = vsnprintf(NULL, 0, format, args) + 1;
 	char *buf = (char *) malloc(size);
