@@ -169,7 +169,20 @@ void parse_args(int argc, char **argv) {
 int main(int argc, char **argv) {
   parse_args(argc, argv);
 
+#ifndef NDEBUG
+  printf(
+    "config_file: %s\n"
+    "jobs:        %d\n"
+    "verbosity    %d\n"
+    "destdir      %s\n"
+    "keep_going   %d\n",
+    options.config_file.c_str(),
+    options.jobs,
+    options.verbosity,
+    options.destdir.c_str(),
+    options.keep_going
+  );
+#endif
 
-
-  INI_Parser::INI_Data config_data = INI_Parser::ini_parse(options.config_file);
+  // auto config_data = INI_Parser::ini_parse(options.config_file);
 }

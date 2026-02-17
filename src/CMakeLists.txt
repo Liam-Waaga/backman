@@ -16,4 +16,6 @@ target_link_libraries(
   backman
   PRIVATE
   log
+  parser
+  target
 )

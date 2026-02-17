@@ -165,7 +165,7 @@ INI_Parser::INI_Section::INI_Section(std::vector<std::string> &lines, std::size_
         break;
       try {
         _fields.push_back(INI_Parser::INI_Field(line));
-      } catch (std::runtime_error e) {
+      } catch (std::runtime_error &e) {
         Logger::logf(Logger::WARN, "Error \"%s\" in INI parsing at line %d. Ignoring line", e.what(), current_line + 1);
       }
     }

@@ -53,14 +53,7 @@ void _log(char const * const file, int linenumber, char const * const function, 
 
 const char *safe_format(const char *format, ...);
 
-inline const char *vsafe_format(const char *format, va_list args) {
-	/* + 1 for null terminator */
-	int size = vsnprintf(NULL, 0, format, args) + 1;
-	char *buf = malloc(size);
-	vsnprintf(buf, size, format, args);
-
-	return buf;
-}
+const char *vsafe_format(const char *format, va_list args);
 
 
 #ifdef __cplusplus

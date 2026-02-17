@@ -56,3 +56,12 @@ const char *safe_format(const char *format, ...) {
 
 	return vsafe_format(format, args);
 }
+
+const char *vsafe_format(const char *format, va_list args) {
+	/* + 1 for null terminator */
+	int size = vsnprintf(NULL, 0, format, args) + 1;
+	char *buf = (char *) malloc(size);
+	vsnprintf(buf, size, format, args);
+
+	return buf;
+}
