@@ -1,4 +1,4 @@
-# Backan
+# Backman
 Simple backup manager written in c++
 
 ## Example config
