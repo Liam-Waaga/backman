@@ -51,9 +51,9 @@ Target::Target(INI_Parser::INI_Section target_config) {
   std::vector<std::string>   compress_levels = target_config["compress_level"];
   std::vector<std::string> compress_programs = target_config["compress_program"];
   std::vector<std::string>          encrypts = target_config["encrypt"];
-  std::vector<std::string>  before_hooks_str = target_config["before_hook"];
-  std::vector<std::string>     end_hooks_str = target_config["end_hook"];
-  std::vector<std::string>          excludes = target_config["exclude"];
+  std::vector<std::string>  before_hooks_arr = target_config["before_hook"];
+  std::vector<std::string>     end_hooks_arr = target_config["end_hook"];
+  std::vector<std::string>      excludes_arr = target_config["exclude"];
 
   if (paths.size() != 1) {
     Logger::logf(Logger::ERROR, "path may only be defined once but defined %d times", paths.size());
@@ -138,17 +138,60 @@ Target::Target(INI_Parser::INI_Section target_config) {
     this->encrypt = false;
   }
 
-  for (size_t i = 0; i < before_hooks_str.size(); i++) {
-    this->before_hooks.emplace_back(before_hooks_str[i]);
+  for (size_t i = 0; i < before_hooks_arr.size(); i++) {
+    this->before_hooks.emplace_back(before_hooks_arr[i]);
   }
 
-  for (size_t i = 0; i < end_hooks_str.size(); i++) {
-    this->end_hooks.emplace_back(end_hooks_str[i]);
+  for (size_t i = 0; i < end_hooks_arr.size(); i++) {
+    this->end_hooks.emplace_back(end_hooks_arr[i]);
   }
 
-  for (size_t i = 0; i < excludes.size(); i++) {
-    this->excludes.emplace_back(excludes[i]);
+  for (size_t i = 0; i < excludes_arr.size(); i++) {
+    this->excludes.emplace_back(excludes_arr[i]);
   }
+
+#ifndef NDEBUG
+  std::string before_hooks_arr_str = "[";
+  for (size_t i = 0; i < before_hooks_arr.size(); i++) {
+    before_hooks_arr_str += before_hooks_arr[i] + ", ";
+  }
+  before_hooks_arr_str += "]";
+
+  std::string end_hooks_arr_str = "[";
+  for (size_t i = 0; i < end_hooks_arr.size(); i++) {
+    end_hooks_arr_str += end_hooks_arr[i] + ", ";
+  }
+  end_hooks_arr_str += "]";
+
+  std::string excludes_arr_str = "[";
+  for (size_t i = 0; i < excludes_arr.size(); i++) {
+    excludes_arr_str += excludes_arr[i] + ", ";
+  }
+  excludes_arr_str += "]";
+
+  std::printf(
+    "path:             %s\n"
+    "elavated:         %d\n"
+    "name:             %s\n"
+    "dest:             %s\n"
+    "compress_level:   %s\n"
+    "compress_program: %s\n"
+    "encrypt:          %d\n"
+    "before_hooks:     %s\n"
+    "end_hooks:        %s\n"
+    "excludes:         %s\n",
+    this->path.c_str(),
+    (int) this->elavated,
+    this->name.c_str(),
+    this->dest.c_str(),
+    this->compress_level.c_str(),
+    this->compress_program.c_str(),
+    (int) this->encrypt,
+    before_hooks_arr_str.c_str(),
+    end_hooks_arr_str.c_str(),
+    excludes_arr_str.c_str()
+  );
+#endif
 
 }
 
