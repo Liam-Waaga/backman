@@ -10,8 +10,8 @@ execute_process(
 
 
 project(
-  backup
-  VERSION 0.0.1
+  backman
+  VERSION 0.1
   LANGUAGES CXX C
 )
 
@@ -32,3 +32,7 @@ add_subdirectory(
   src
 )
 
+install(
+  TARGETS backman
+  RUNTIME DESTINATION bin
+)
