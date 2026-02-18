@@ -229,7 +229,7 @@ int main(int argc, char **argv) {
 
   for (auto target : targets) {
     for (auto name : options.targets) {
-      if (target.get_name() == name) {
+      if (target.get_name() == name || name == "all") {
         target.run_before_hooks();
         target.run_main();
         target.wait_main();

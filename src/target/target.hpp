@@ -86,6 +86,7 @@ class Target {
   };
   std::vector<ProcExitStatusSimple>  children_status;
   std::filesystem::path              old_path;
+  std::string                        elavate_program;
 
   // std::vector<std::string>           tar_flags;
 

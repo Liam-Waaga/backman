@@ -47,17 +47,18 @@ inline std::string toLower(std::string str) {
 }
 
 Target::Target(INI_Parser::INI_Section target_config) {
-  std::vector<std::string>             paths = target_config["path"];
-  std::vector<std::string>         elavateds = target_config["elavated"];
-  std::vector<std::string>             names = target_config["name"];
-  std::vector<std::string>             dests = target_config["dest"];
-  std::vector<std::string>   compress_levels = target_config["compress_level"];
-  std::vector<std::string> compress_programs = target_config["compress_program"];
-  std::vector<std::string>          encrypts = target_config["encrypt"];
-  std::vector<std::string>  one_file_systems = target_config["one_file_system"];
-  std::vector<std::string>  before_hooks_arr = target_config["before_hook"];
-  std::vector<std::string>     end_hooks_arr = target_config["end_hook"];
-  std::vector<std::string>      excludes_arr = target_config["exclude"];
+  std::vector<std::string>               paths = target_config["path"];
+  std::vector<std::string>           elavateds = target_config["elavated"];
+  std::vector<std::string>               names = target_config["name"];
+  std::vector<std::string>               dests = target_config["dest"];
+  std::vector<std::string>     compress_levels = target_config["compress_level"];
+  std::vector<std::string>   compress_programs = target_config["compress_program"];
+  std::vector<std::string>            encrypts = target_config["encrypt"];
+  std::vector<std::string>    one_file_systems = target_config["one_file_system"];
+  std::vector<std::string>    before_hooks_arr = target_config["before_hook"];
+  std::vector<std::string>       end_hooks_arr = target_config["end_hook"];
+  std::vector<std::string>        excludes_arr = target_config["exclude"];
+  std::vector<std::string> elavate_program_arr = target_config["elavate_program"];
   // std::vector<std::string>         tar_flags = target_config["add_tar_flag"];
 
   if (paths.size() != 1) {
@@ -156,6 +157,15 @@ Target::Target(INI_Parser::INI_Section target_config) {
     this->one_file_system = true;
   }
 
+  if (elavate_program_arr.size() > 1) {
+    Logger::logf(Logger::ERROR, "compress_program may only be defined once but defined %d times", elavate_program_arr.size());
+    std::exit(1);
+  } else if (elavate_program_arr.size() == 1) {
+    this->elavate_program = elavate_program_arr[0];
+  } else {
+    this->elavate_program = "su";
+  }
+
 
   for (size_t i = 0; i < before_hooks_arr.size(); i++) {
     this->before_hooks.emplace_back(before_hooks_arr[i]);
@@ -247,6 +257,10 @@ void Target::run_main() {
 
   size_t tar_command_arguments_count = 0;
 
+  if (this->elavated) {
+    tar_command_arguments_count++; /* elavate_command */
+    tar_command_arguments_count++; /* -- */
+  }
   tar_command_arguments_count++; /* tar */
   if (this->one_file_system) {
     tar_command_arguments_count++; /* --one-file-system */
@@ -270,6 +284,10 @@ void Target::run_main() {
   char *destination_file_path = Logger::safe_format("%s/%s", this->dest.c_str(), this->get_file_name().c_str());
 
   size_t tar_command_used = 0;
+  if (this->elavated) {
+    tar_command[tar_command_used++] = this->elavate_program.c_str();
+    tar_command[tar_command_used++] = "--";
+  }
   tar_command[tar_command_used++] = "tar";
   if (this->one_file_system) {
     tar_command[tar_command_used++] = "--one-file-system";
@@ -338,7 +356,6 @@ void Target::run_main() {
   fs::create_directories(this->dest);
 
   this->old_path = fs::current_path();
-  chdir(this->path.c_str());
 
   /* actually run the programs */
   if (this->encrypt) {
@@ -426,8 +443,7 @@ void Target::run_main() {
   free(exclude_args);
   free(destination_file_path);
   free(gpg_command);
-  
-  chdir(this->old_path.c_str());
+
 }
 
 void Target::set_passphrase(std::string pass) {
