@@ -60,7 +60,7 @@ static constexpr char const * const help_format =
 
 /* i hate argument parsing */
 void parse_args(int argc, char **argv) {
-  for (int i = 0; i < argc; i++) {
+  for (int i = 1; i < argc; i++) {
     std::string opt = argv[i];
     if (opt == "--help") {
       std::printf(help_format, version_string);
@@ -105,6 +105,7 @@ void parse_args(int argc, char **argv) {
           if (opt[j] == '-') {
             is_opt = true;
           }
+          continue;
         }
         if (j == 2 && is_opt && opt[j] == '-') {
           Logger::logf(Logger::ERROR, "unknown option \"%s\"", opt.c_str());
@@ -114,11 +115,9 @@ void parse_args(int argc, char **argv) {
           if (opt[j] == 'h') {
             std::printf(help_format, version_string);
             std::exit(0);
-          }
-          if (opt[j] == 'v') {
+          } else if (opt[j] == 'v') {
             options.verbosity++;
-          }
-          if (opt[j] == 'j') {
+          } else if (opt[j] == 'j') {
             if (!accepts_arg) {
               accepts_arg = true;
 
@@ -136,8 +135,7 @@ void parse_args(int argc, char **argv) {
             }
             Logger::logf(Logger::ERROR, "cannot have multiple options which accept arguments in \"%s\"", opt.c_str());
             std::exit(1);
-          }
-          if (opt[j] == 'c') {
+          } else if (opt[j] == 'c') {
             if (!accepts_arg) {
               accepts_arg = true;
               if (++i < argc) {
@@ -149,9 +147,16 @@ void parse_args(int argc, char **argv) {
             }
             Logger::logf(Logger::ERROR, "cannot have multiple options which accept arguments in \"%s\"", opt.c_str());
             std::exit(1);
+          } else {
+            Logger::logf(Logger::ERROR, "unkown option '%c'", opt[j]);
+            std::exit(1);
           }
-        } else {
-          options.targets.push_back(opt);
+        }
+      }
+      if (!is_opt) {
+        options.targets.push_back(opt);
+        if (opt == "all") {
+          options.all_targets = true;
         }
       }
     }
@@ -193,24 +198,6 @@ int main(int argc, char **argv) {
       /* handle global section */
     } else if (section.get_section_name() == "target") {
       targets.emplace_back(section);
-
-      if (targets.back().is_encrypted()) {
-        get_pass:
-        std::string pass;
-        std::string verify_pass;
-        std::printf("Passphrase for target \"%s\"\n", targets.back().get_name().c_str());
-        std::getline(std::cin, pass);
-
-        std::printf("Confirm passphrase for target \"%s\"\n", targets.back().get_name().c_str());
-        std::getline(std::cin, verify_pass);
-
-        if (pass != verify_pass) {
-          std::printf("Passphrases don't match\n");
-          goto get_pass;
-        }
-
-        targets.back().set_passphrase(pass);
-      }
     } else {
       Logger::logf(Logger::WARN, "Invalid section \"%s\", ignoring", section.get_section_name().c_str());
       std::printf("Press enter to continue or ^C to stop: ");
@@ -218,25 +205,49 @@ int main(int argc, char **argv) {
     }
   }
 
-  for (size_t i = 0; i < targets.size(); i++) {
-    for (size_t j = i + 1; j < targets.size(); j++) {
-      if (targets[i].get_name() == targets[j].get_name()) {
-        Logger::logf(Logger::ERROR, "multiple targets with the same name \"%s\"", targets[i].get_name().c_str());
+  if (options.all_targets && options.targets.size() > 1) {
+    Logger::log(Logger::ERROR, "target all called simultaneously to other targets");
+    std::exit(1);
+  }
+
+  for (size_t i = 0; i < options.targets.size(); i++) {
+    for (size_t j = i + 1; j < options.targets.size(); j++) {
+      if (options.targets[i] == options.targets[j]) {
+        Logger::logf(Logger::ERROR, "target \"%s\" requested multiple times", options.targets[i].c_str());
+        std::exit(1);
       }
+    }
+  }
+
+  for (size_t i = 0; i < targets.size(); i++) {
+    for (size_t j = 0; j < options.targets.size(); j++) {
+      if (options.all_targets || targets[i].get_name() == options.targets[j]) {
+        targets[i].set_passphrase();
+        goto next1;
+      }
+    }
+    targets.erase(targets.begin() + i--);
+    next1: ;
+  }
+
+  if (!options.all_targets) {
+    for (size_t j = 0; j < options.targets.size(); j++) {
+      for (size_t i = 0; i < targets.size(); i++) {
+        if (targets[i].get_name() == options.targets[j]) {
+          goto next2;
+        }
+      }
+      Logger::logf(Logger::ERROR, "target \"%s\" not found", options.targets[j].c_str());
+      std::exit(1);
+      next2: ;
     }
   }
 
 
   for (auto target : targets) {
-    for (auto name : options.targets) {
-      if (target.get_name() == name || name == "all") {
-        target.run_before_hooks();
-        target.run_main();
-        target.wait_main();
-        target.run_end_hooks();
-        goto next;
-      }
-    }
-    next: ;
+    target.run_before_hooks();
+    target.run_main();
+    target.wait_main();
+    target.run_end_hooks();
   }
 }

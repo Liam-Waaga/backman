@@ -43,7 +43,7 @@ class Target {
   bool        has_exited();
   bool        run_before_hooks();
   bool        run_end_hooks();
-  void        set_passphrase(std::string pass);
+  void        set_passphrase();
   bool        is_encrypted();
   std::string get_name();
 

@@ -29,6 +29,9 @@
 #include <filesystem>
 #include <cstdlib>
 #include <cctype>
+#include <iostream>
+#include <termios.h>
+#include <unistd.h>
 
 std::filesystem::path resolve_path_with_environment(const std::string& path) {
   std::string result;
@@ -86,4 +89,26 @@ std::filesystem::path resolve_path_with_environment(const std::string& path) {
   }
 
   return std::filesystem::path(result);
+}
+
+
+bool getline_noecho(std::istream& in, std::string& out) {
+    if (!isatty(STDIN_FILENO))
+        return static_cast<bool>(std::getline(in, out));
+
+    termios oldt;
+    if (tcgetattr(STDIN_FILENO, &oldt) != 0)
+        return false;
+
+    termios newt = oldt;
+    newt.c_lflag &= ~ECHO;
+
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &newt) != 0)
+        return false;
+
+    bool ok = static_cast<bool>(std::getline(in, out));
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+
+    return ok;
 }

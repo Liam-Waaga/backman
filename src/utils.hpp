@@ -34,6 +34,7 @@ struct Options {
   int                     verbosity = 0;
   std::filesystem::path     destdir = "";
   bool                   keep_going = false;
+  bool                  all_targets = false;
   std::vector<std::string>  targets;
 };
 
@@ -42,3 +43,5 @@ extern Options options;
 extern INI_Parser::INI_Data parsed_config;
 
 std::filesystem::path resolve_path_with_environment(const std::string &path);
+
+bool getline_noecho(std::istream &in, std::string &out);

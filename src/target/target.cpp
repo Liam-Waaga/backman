@@ -37,6 +37,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <vector>
+#include <iostream>
 #include <algorithm>
 
 using namespace std::chrono_literals;
@@ -257,6 +258,10 @@ void Target::run_main() {
 
   size_t tar_command_arguments_count = 0;
 
+  if (geteuid() == 0 || getegid() == 0) {
+    this->elavated = false; /* techinically true but we don't need to elavate so we set it to false so we don't later */
+  }
+
   if (this->elavated) {
     tar_command_arguments_count++; /* elavate_command */
     tar_command_arguments_count++; /* -- */
@@ -446,8 +451,29 @@ void Target::run_main() {
 
 }
 
-void Target::set_passphrase(std::string pass) {
-  this->passphrase = pass;
+void Target::set_passphrase() {
+  if (this->is_encrypted()) {
+    get_pass:
+
+    std::string pass;
+    std::string verify_pass;
+    std::printf("Passphrase for target \"%s\": ", name.c_str());
+    getline_noecho(std::cin, pass);
+    printf("\n");
+
+    std::printf("Confirm passphrase for target \"%s\": ", name.c_str());
+    getline_noecho(std::cin, verify_pass);
+    printf("\n");
+
+    if (pass != verify_pass) {
+      std::printf("Passphrases don't match\n");
+      goto get_pass;
+    }
+
+
+    this->passphrase = pass;
+  }
+
 }
 
 bool Target::is_encrypted() {
