@@ -85,6 +85,7 @@ class Target {
     bool failed = false;
   };
   std::vector<ProcExitStatusSimple>  children_status;
+  std::filesystem::path              old_path;
 
   // std::vector<std::string>           tar_flags;
 

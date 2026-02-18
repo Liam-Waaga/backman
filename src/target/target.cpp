@@ -337,6 +337,7 @@ void Target::run_main() {
 
   fs::create_directories(this->dest);
 
+  this->old_path = fs::current_path();
   chdir(this->path.c_str());
 
   /* actually run the programs */
@@ -425,6 +426,8 @@ void Target::run_main() {
   free(exclude_args);
   free(destination_file_path);
   free(gpg_command);
+  
+  chdir(this->old_path.c_str());
 }
 
 void Target::set_passphrase(std::string pass) {
