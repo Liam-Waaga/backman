@@ -90,19 +90,23 @@ Target::Target(INI_Parser::INI_Section target_config) {
     this->name = names[0];
   }
 
-  if (dests.size() > 1) {
-    Logger::logf(Logger::ERROR, "dest may only be defined once but defined %d times", dests.size());
-    std::exit(1);
-  } else if (dests.size() == 1) {
-    this->dest = resolve_path_with_environment(dests[0]);
+  if (options.destdir != "") {
+    this->dest = options.destdir;
   } else {
-    if (parsed_config[0]["default_dest"].size() == 1)
-      this->dest = resolve_path_with_environment(parsed_config[0]["default_dest"][0]);
-    else if (parsed_config[0]["default_dest"].size() > 1) {
-      Logger::logf(Logger::ERROR, "default_dest may only be defined once but defined %d times", parsed_config[0]["default_dest"].size());
+    if (dests.size() > 1) {
+      Logger::logf(Logger::ERROR, "dest may only be defined once but defined %d times", dests.size());
       std::exit(1);
+    } else if (dests.size() == 1) {
+      this->dest = resolve_path_with_environment(dests[0]);
     } else {
-      this->dest = resolve_path_with_environment("$HOME/Backups");
+      if (parsed_config[0]["default_dest"].size() == 1)
+        this->dest = resolve_path_with_environment(parsed_config[0]["default_dest"][0]);
+      else if (parsed_config[0]["default_dest"].size() > 1) {
+        Logger::logf(Logger::ERROR, "default_dest may only be defined once but defined %d times", parsed_config[0]["default_dest"].size());
+        std::exit(1);
+      } else {
+        this->dest = resolve_path_with_environment("$HOME/Backups");
+      }
     }
   }
 
