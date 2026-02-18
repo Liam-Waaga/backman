@@ -32,6 +32,7 @@
 #include <stddef.h>
 #include <string>
 #include <vector>
+#include <iostream>
 
 namespace fs = std::filesystem;
 
@@ -174,12 +175,46 @@ int main(int argc, char **argv) {
   );
 #endif
 
-  parsed_config = INI_Parser::ini_parse(options.config_file);
+  if (fs::exists(options.config_file)) {
+    parsed_config = INI_Parser::ini_parse(options.config_file);
+  } else {
+    Logger::logf(Logger::ERROR, "config file \"%s\" does not exist", options.config_file.c_str());
+    std::exit(1);
+  }
 
-
+  std::vector<Target> targets;
   for (INI_Parser::INI_Section section : parsed_config) {
-    if (section.get_section_name() == "target") {
-      Target t(section);
+    if (section.get_section_name() == "") {
+      /* handle global section */
+    } else if (section.get_section_name() == "target") {
+      targets.emplace_back(section);
+
+      if (targets.back().is_encrypted()) {
+        get_pass:
+        std::string pass;
+        std::string verify_pass;
+        std::printf("Passphrase for target \"%s\"\n", targets.back().get_name().c_str());
+        std::getline(std::cin, pass);
+
+        std::printf("Confirm passphrase for target \"%s\"\n", targets.back().get_name().c_str());
+        std::getline(std::cin, verify_pass);
+
+        if (pass != verify_pass) {
+          std::printf("Passphrases don't match\n");
+          goto get_pass;
+        }
+
+        targets.back().set_passphrase(pass);
+      }
+    } else {
+      Logger::logf(Logger::WARN, "Invalid section \"%s\", ignoring", section.get_section_name().c_str());
+      std::printf("Press enter to continue or ^C to stop: ");
+      std::cin.get();
     }
+  }
+
+  for (auto target : targets) {
+    target.run_main();
+    target.wait_main();
   }
 }

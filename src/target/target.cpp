@@ -30,6 +30,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
+#include <filesystem>
 #include <thread>
 #include <unistd.h>
 #include <string>
@@ -175,19 +176,19 @@ Target::Target(INI_Parser::INI_Section target_config) {
 #ifndef NDEBUG
   std::string before_hooks_arr_str = "[";
   for (size_t i = 0; i < before_hooks_arr.size(); i++) {
-    before_hooks_arr_str += before_hooks_arr[i] + ", ";
+    before_hooks_arr_str += "\"" + before_hooks_arr[i] + "\", ";
   }
   before_hooks_arr_str += "]";
 
   std::string end_hooks_arr_str = "[";
   for (size_t i = 0; i < end_hooks_arr.size(); i++) {
-    end_hooks_arr_str += end_hooks_arr[i] + ", ";
+    end_hooks_arr_str += "\"" + end_hooks_arr[i] + "\", ";
   }
   end_hooks_arr_str += "]";
 
   std::string excludes_arr_str = "[";
   for (size_t i = 0; i < excludes_arr.size(); i++) {
-    excludes_arr_str += excludes_arr[i] + ", ";
+    excludes_arr_str += "\"" + excludes_arr[i] + "\", ";
   }
   excludes_arr_str += "]";
 
@@ -224,19 +225,26 @@ std::string Target::get_file_name() {
   struct tm tm = *localtime(&t);
   char buff[128];
   strftime(buff, sizeof(buff), "%Y-%m-%d", &tm);
-  std::string ext = "";
+  std::string ext = "tar.";
   ext += this->compress_program;
   if (this->encrypt) {
     ext += ".gpg";
   }
-  char *file_name = Logger::safe_format("%s_%s.tar.%s", this->name.c_str(), buff, ext.c_str());
-  std::string file_name_str(file_name);
-  free(file_name);
-  return file_name_str;
+  std::string name = this->name + "_" + buff + ext;
+  // char *file_name = Logger::safe_format("%s_%s.tar.%s", this->name.c_str(), buff, ext.c_str());
+  // std::string file_name_str(file_name);
+  // free(file_name);
+  return name;
 }
 
 
 void Target::run_main() {
+
+  if (this->encrypt && this->passphrase == "") {
+    Logger::log(Logger::ERROR, "encrypt set to true but no passphrase was provided (bug)");
+    std::exit(1);
+  }
+
   size_t tar_command_arguments_count = 0;
 
   tar_command_arguments_count++; /* tar */
@@ -271,7 +279,7 @@ void Target::run_main() {
   tar_command[tar_command_used++] = "--acls";
   tar_command[tar_command_used++] = "-I";
 
-  char *compress_command = Logger::safe_format("%s %s --threads=0", this->compress_program.c_str(), this->compress_level.c_str());
+  char *compress_command = Logger::safe_format("%s -%s --threads=0", this->compress_program.c_str(), this->compress_level.c_str());
 
   tar_command[tar_command_used++] = compress_command;
 
@@ -294,13 +302,15 @@ void Target::run_main() {
   size_t gpg_command_arguments_count = 0;
   if (this->encrypt) {
     gpg_command_arguments_count++; /* gpg */
+    gpg_command_arguments_count++; /* --batch */
+    gpg_command_arguments_count++; /* --yes */
     gpg_command_arguments_count++; /* --pinentry-mode */
     gpg_command_arguments_count++; /* loopback */
+    gpg_command_arguments_count++; /* --passphase-fd */
+    gpg_command_arguments_count++; /* `fd` */
     gpg_command_arguments_count++; /* --symmetric */
     gpg_command_arguments_count++; /* --cipher-algo */
     gpg_command_arguments_count++; /* AES256 */
-    gpg_command_arguments_count++; /* --passphase-fd */
-    gpg_command_arguments_count++; /* `fd` */
     gpg_command_arguments_count++; /* -o */
     gpg_command_arguments_count++; /* `destination_file_path` */
     gpg_command_arguments_count++; /* NULL */
@@ -308,28 +318,33 @@ void Target::run_main() {
 
   char const **gpg_command = (char const **) malloc(sizeof(*gpg_command) * gpg_command_arguments_count);
 
-  /* TODO: construct gpg_command */
   size_t gpg_command_used = 0;
   gpg_command[gpg_command_used++] = "gpg";
+  gpg_command[gpg_command_used++] = "--batch";
+  gpg_command[gpg_command_used++] = "--yes";
   gpg_command[gpg_command_used++] = "--pinentry-mode";
   gpg_command[gpg_command_used++] = "loopback";
-  gpg_command[gpg_command_used++] = "--symmetric";
-  gpg_command[gpg_command_used++] = "--cipher-algo";
-  gpg_command[gpg_command_used++] = "AES256";
   gpg_command[gpg_command_used++] = "--passphrase-fd";
   size_t gpg_command_pwfd_index = gpg_command_used++;
   gpg_command[gpg_command_pwfd_index] = "0"; /* Placeholder */
+  gpg_command[gpg_command_used++] = "--symmetric";
+  gpg_command[gpg_command_used++] = "--cipher-algo";
+  gpg_command[gpg_command_used++] = "AES256";
   gpg_command[gpg_command_used++] = "-o";
   gpg_command[gpg_command_used++] = destination_file_path;
   gpg_command[gpg_command_used++] = NULL;
 
+
+  fs::create_directories(this->dest);
+
+  /* actually run the programs */
   if (this->encrypt) {
-    int tar_and_gpg_pipefds[2]; /* [0] is write and [1] is read */
+    int tar_and_gpg_pipefds[2]; /* [1] is write and [0] is read */
     pipe(tar_and_gpg_pipefds);
     pid_t tar_pid = fork();
     if (tar_pid == 0) {
-      close(tar_and_gpg_pipefds[1]); /* close read end */
-      dup2(tar_and_gpg_pipefds[0], 1); /* redirect stdout to the pipe */
+      close(tar_and_gpg_pipefds[0]); /* close read end */
+      dup2(tar_and_gpg_pipefds[1], 1); /* redirect stdout to the pipe */
       execvp(tar_command[0], /* yolo cast */ (char *const *) tar_command);
       Logger::log(Logger::ERROR, "execvp() failed");
       std::exit(1);
@@ -349,12 +364,12 @@ void Target::run_main() {
 
     if (gpg_pid == 0) {
 
-      close(passphrase_pipefds[0]); /* close write end */
-      gpg_command[gpg_command_pwfd_index] = Logger::safe_format("%d", passphrase_pipefds[1]);
+      close(passphrase_pipefds[1]); /* close write end */
+      gpg_command[gpg_command_pwfd_index] = Logger::safe_format("%d", passphrase_pipefds[0]);
       /* no need to free because we immediately exec or exit in which case the resources are taken care of */
 
-      close(tar_and_gpg_pipefds[0]); /* close write end */
-      dup2(tar_and_gpg_pipefds[1], 0); /* redirect pipe to stdin */
+      close(tar_and_gpg_pipefds[1]); /* close write end */
+      dup2(tar_and_gpg_pipefds[0], 0); /* redirect pipe to stdin */
       execvp(gpg_command[0], (char * const *) gpg_command);
       Logger::log(Logger::ERROR, "execvp() failed");
       kill(tar_pid, SIGKILL);
@@ -364,11 +379,13 @@ void Target::run_main() {
       this->children.push_back(gpg_pid);
 
       /* gpg expects to recieve a newline as well, as that is what is supplied when given normally, as well as when given with [fd]<<< */
-      passphrase += '\n';
+      this->passphrase += '\n';
 
-      /* actually ignore the null terminator this time because we it is given EOF on close() */
-      write(passphrase_pipefds[0], this->passphrase.c_str(), this->passphrase.length());
-      close(passphrase_pipefds[0]);
+      std::printf("%s", passphrase.c_str());
+
+      /* actually ignore the null terminator this time because it isn't expecting a c string */
+      write(passphrase_pipefds[1], this->passphrase.c_str(), this->passphrase.length());
+      close(passphrase_pipefds[1]);
     }
     if (gpg_pid == -1) {
       Logger::log(Logger::ERROR, "fork() failed");
@@ -403,9 +420,35 @@ void Target::run_main() {
   free(gpg_command);
 }
 
-int Target::wait_main() {
-  /* TODO: implement wait_main() */
-  return -1;
+void Target::set_passphrase(std::string pass) {
+  this->passphrase = pass;
+}
+
+bool Target::is_encrypted() {
+  return this->encrypt;
+}
+
+bool Target::has_exited() {
+  for (pid_t cpid : this->children) {
+    int status = 0;
+    waitpid(cpid, &status, WNOHANG);
+    bool has_exited = WIFEXITED(status) || WIFSIGNALED(status);
+    if (has_exited)
+      return true;
+  }
+  return false;
+}
+
+
+void Target::wait_main() {
+  for (pid_t cpid : this->children) {
+    int stat = 0;
+    waitpid(cpid, &stat, 0);
+  }
+}
+
+std::string Target::get_name() {
+  return this->name;
 }
 
 bool Target::run_hooks(std::vector<Target::SystemCommand> hooks) {

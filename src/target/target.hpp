@@ -38,10 +38,14 @@ class Target {
   Target(INI_Parser::INI_Section target_config);
 
   /* begins execution of the target */
-  void run_main();
-  int  wait_main();
-  bool run_before_hooks();
-  bool run_end_hooks();
+  void        run_main();
+  void        wait_main();
+  bool        has_exited();
+  bool        run_before_hooks();
+  bool        run_end_hooks();
+  void        set_passphrase(std::string pass);
+  bool        is_encrypted();
+  std::string get_name();
 
   class SystemCommand {
     public:
@@ -75,6 +79,13 @@ class Target {
   std::vector<SystemCommand>         end_hooks;
   std::vector<std::filesystem::path> excludes;
   std::vector<pid_t>                 children;
+  struct ProcExitStatusSimple {
+    int    code = -1;
+    bool exited = false;
+    bool failed = false;
+  };
+  std::vector<ProcExitStatusSimple>  children_status;
+
   // std::vector<std::string>           tar_flags;
 
   static bool run_hooks(std::vector<SystemCommand> hooks);

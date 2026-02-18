@@ -58,10 +58,21 @@ char *safe_format(const char *format, ...) {
 }
 
 char *vsafe_format(const char *format, va_list args) {
-	/* + 1 for null terminator */
-	int size = vsnprintf(NULL, 0, format, args) + 1;
-	char *buf = (char *) malloc(size);
-	vsnprintf(buf, size, format, args);
+    va_list args_copy;
+    va_copy(args_copy, args);
 
-	return buf;
+    int needed = vsnprintf(NULL, 0, format, args_copy);
+    va_end(args_copy);
+
+    if (needed < 0)
+        return NULL;
+
+    size_t size = (size_t)needed + 1;
+
+    char *buf = malloc(size);
+    if (!buf)
+        return NULL;
+
+    vsnprintf(buf, size, format, args);
+    return buf;
 }
