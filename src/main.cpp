@@ -160,6 +160,7 @@ void parse_args(int argc, char **argv) {
 
 
 int main(int argc, char **argv) {
+  options.config_file = resolve_path_with_environment("$XDG_CONFIG_HOME/backman/backman.ini");
   parse_args(argc, argv);
 
 #ifndef NDEBUG

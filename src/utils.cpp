@@ -24,9 +24,66 @@
 
 #include "utils.hpp"
 
-#include <filesystem>
 
-std::filesystem::path resolve_path_with_environment(std::string path) {
-  (void) path;
-  return "";
+#include <string>
+#include <filesystem>
+#include <cstdlib>
+#include <cctype>
+
+std::filesystem::path resolve_path_with_environment(const std::string& path) {
+  std::string result;
+  result.reserve(path.size());
+
+  for (size_t i = 0; i < path.size(); ++i) {
+    if (path[i] != '$') {
+      result += path[i];
+      continue;
+    }
+
+    // Handle ${VAR}
+    if (i + 1 < path.size() && path[i + 1] == '{') {
+      size_t end = path.find('}', i + 2);
+      if (end == std::string::npos) {
+        result += '$'; // malformed, keep literal
+        continue;
+      }
+
+      std::string var = path.substr(i + 2, end - (i + 2));
+      const char* val = std::getenv(var.c_str());
+
+      if (val)
+        result += val;
+      else
+        result += "${" + var + "}";
+
+      i = end;
+      continue;
+    }
+
+    // Handle $VAR
+    size_t start = i + 1;
+    size_t j = start;
+
+    while (j < path.size() &&
+           (std::isalnum(static_cast<unsigned char>(path[j])) || path[j] == '_')) {
+      ++j;
+    }
+
+    if (j == start) {
+      result += '$'; // lone $
+      continue;
+    }
+
+    std::string var = path.substr(start, j - start);
+    const char* val = std::getenv(var.c_str());
+
+    if (val)
+      result += val;
+    else
+      result += "$" + var;
+
+    i = j - 1;
+  }
+
+  return std::filesystem::path(result);
 }

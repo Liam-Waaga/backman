@@ -41,4 +41,4 @@ extern Options options;
 
 extern INI_Parser::INI_Data parsed_config;
 
-std::filesystem::path resolve_path_with_environment(std::string path);
+std::filesystem::path resolve_path_with_environment(const std::string &path);
