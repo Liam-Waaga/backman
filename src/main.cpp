@@ -22,6 +22,7 @@
 */
 
 #include "parser/parser.hpp"
+
 #include "target/target.hpp"
 #include "log/log.h"
 #include "utils.hpp"
@@ -33,6 +34,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+
 
 namespace fs = std::filesystem;
 
@@ -48,11 +50,11 @@ static constexpr char const * const help_format =
 "Options:\n"
 "  -h,  --help            Display this help text\n"
 "       --version         Display this help text (includes version)\n"
-"  -v,  --verbose         Increase verbocity\n"
+"  -v,  --verbose         Increase verbocity (unimplemented)\n"
 "  -j,  --jobs    <jobs>  Number of jobs to use (for hooks)\n"
-"       --destdir <dir>   Destination directory to put the archives (overrides dest option for targets)\n"
+"       --destdir <dir>   Destination directory to put the archives (overrides dest option for targets) (unimplemented)\n"
 "  -c,  --config  <file>  Config file\n"
-"       --keep-going      Keep going after an errored target\n"
+"       --keep-going      Keep going after an errored target (unimplemented)\n"
 ;
 
 
@@ -175,6 +177,8 @@ int main(int argc, char **argv) {
   );
 #endif
 
+
+
   if (fs::exists(options.config_file)) {
     parsed_config = INI_Parser::ini_parse(options.config_file);
   } else {
@@ -213,8 +217,25 @@ int main(int argc, char **argv) {
     }
   }
 
+  for (size_t i = 0; i < targets.size(); i++) {
+    for (size_t j = i + 1; j < targets.size(); j++) {
+      if (targets[i].get_name() == targets[j].get_name()) {
+        Logger::logf(Logger::ERROR, "multiple targets with the same name \"%s\"", targets[i].get_name().c_str());
+      }
+    }
+  }
+
+
   for (auto target : targets) {
-    target.run_main();
-    target.wait_main();
+    for (auto name : options.targets) {
+      if (target.get_name() == name) {
+        target.run_before_hooks();
+        target.run_main();
+        target.wait_main();
+        target.run_end_hooks();
+        goto next;
+      }
+    }
+    next: ;
   }
 }

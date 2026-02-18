@@ -225,7 +225,7 @@ std::string Target::get_file_name() {
   struct tm tm = *localtime(&t);
   char buff[128];
   strftime(buff, sizeof(buff), "%Y-%m-%d", &tm);
-  std::string ext = "tar.";
+  std::string ext = ".tar.";
   ext += this->compress_program;
   if (this->encrypt) {
     ext += ".gpg";
@@ -260,9 +260,9 @@ void Target::run_main() {
   tar_command_arguments_count += this->excludes.size(); /* --exclude= */
   if (!encrypt) {
     tar_command_arguments_count++; /* -f */
-    tar_command_arguments_count++; /* path */
+    tar_command_arguments_count++; /* dest */
   }
-  tar_command_arguments_count++; /* dest */
+  tar_command_arguments_count++; /* path */
   tar_command_arguments_count++; /* NULL */
 
 
@@ -299,22 +299,22 @@ void Target::run_main() {
   tar_command[tar_command_used++] = NULL;
   /* tar command constructed */
 
+
+
   size_t gpg_command_arguments_count = 0;
-  if (this->encrypt) {
-    gpg_command_arguments_count++; /* gpg */
-    gpg_command_arguments_count++; /* --batch */
-    gpg_command_arguments_count++; /* --yes */
-    gpg_command_arguments_count++; /* --pinentry-mode */
-    gpg_command_arguments_count++; /* loopback */
-    gpg_command_arguments_count++; /* --passphase-fd */
-    gpg_command_arguments_count++; /* `fd` */
-    gpg_command_arguments_count++; /* --symmetric */
-    gpg_command_arguments_count++; /* --cipher-algo */
-    gpg_command_arguments_count++; /* AES256 */
-    gpg_command_arguments_count++; /* -o */
-    gpg_command_arguments_count++; /* `destination_file_path` */
-    gpg_command_arguments_count++; /* NULL */
-  }
+  gpg_command_arguments_count++; /* gpg */
+  gpg_command_arguments_count++; /* --batch */
+  gpg_command_arguments_count++; /* --yes */
+  gpg_command_arguments_count++; /* --pinentry-mode */
+  gpg_command_arguments_count++; /* loopback */
+  gpg_command_arguments_count++; /* --passphase-fd */
+  gpg_command_arguments_count++; /* `fd` */
+  gpg_command_arguments_count++; /* --symmetric */
+  gpg_command_arguments_count++; /* --cipher-algo */
+  gpg_command_arguments_count++; /* AES256 */
+  gpg_command_arguments_count++; /* -o */
+  gpg_command_arguments_count++; /* `destination_file_path` */
+  gpg_command_arguments_count++; /* NULL */
 
   char const **gpg_command = (char const **) malloc(sizeof(*gpg_command) * gpg_command_arguments_count);
 
@@ -345,6 +345,7 @@ void Target::run_main() {
     if (tar_pid == 0) {
       close(tar_and_gpg_pipefds[0]); /* close read end */
       dup2(tar_and_gpg_pipefds[1], 1); /* redirect stdout to the pipe */
+      close(tar_and_gpg_pipefds[1]);
       execvp(tar_command[0], /* yolo cast */ (char *const *) tar_command);
       Logger::log(Logger::ERROR, "execvp() failed");
       std::exit(1);
@@ -370,9 +371,10 @@ void Target::run_main() {
 
       close(tar_and_gpg_pipefds[1]); /* close write end */
       dup2(tar_and_gpg_pipefds[0], 0); /* redirect pipe to stdin */
+      close(tar_and_gpg_pipefds[0]);
       execvp(gpg_command[0], (char * const *) gpg_command);
       Logger::log(Logger::ERROR, "execvp() failed");
-      kill(tar_pid, SIGKILL);
+      kill(tar_pid, SIGTERM);
       std::exit(1);
     }
     if (gpg_pid > 0) {
@@ -391,6 +393,9 @@ void Target::run_main() {
       Logger::log(Logger::ERROR, "fork() failed");
       std::exit(1);
     }
+    close(tar_and_gpg_pipefds[0]);
+    close(tar_and_gpg_pipefds[1]);
+
 
   } else {
     /* no encryption */
