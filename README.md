@@ -1,6 +1,10 @@
 # Backman
 Simple backup manager written in c++
 
+## Building
+```cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -B build```
+```cmake --build ./build```
+
 ## Example config
 See the [example config](example_config.ini)
 
