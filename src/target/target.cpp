@@ -219,8 +219,7 @@ Target::Target(INI_Parser::INI_Section target_config) {
     "path:             %s\n"
     "elavated:         %d\n"
     "name:             %s\n"
-    "dest:             %s\n"
-    "compress_level:   %s\n"
+    "destdir:          %s\n"
     "compress_program: %s\n"
     "encrypt:          %d\n"
     "one_file_system:  %d\n"
@@ -230,8 +229,7 @@ Target::Target(INI_Parser::INI_Section target_config) {
     this->path.c_str(),
     (int) this->elavated,
     this->name.c_str(),
-    this->dest.c_str(),
-    this->compress_level.c_str(),
+    this->destdir.c_str(),
     this->compress_program.c_str(),
     (int) this->encrypt,
     (int) this->one_file_system,
@@ -291,9 +289,11 @@ void Target::run_main() {
 
   tar_command.push_back(this->compress_program.c_str());
 
+  std::vector<std::string> exclude_args;
+
   for (size_t i = 0; i < this->excludes.size(); i++) {
-    std::string exclude = "--exclude=\"" + excludes[i].generic_string() + "\"";
-    tar_command.push_back(exclude.c_str());
+    exclude_args.push_back("--exclude=\"" + excludes[i].generic_string() + "\"");
+    tar_command.push_back(exclude_args[i].c_str());
   }
 
   for (std::string arg : this->tar_flags) {
@@ -380,8 +380,6 @@ void Target::run_main() {
 
       /* gpg expects to recieve a newline as well, as that is what is supplied when given normally, as well as when given with [fd]<<< */
       this->passphrase += '\n';
-
-      std::printf("%s", passphrase.c_str());
 
       /* actually ignore the null terminator this time because it isn't expecting a c string */
       write(passphrase_pipefds[1], this->passphrase.c_str(), this->passphrase.length());
