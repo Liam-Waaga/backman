@@ -36,3 +36,8 @@ install(
   TARGETS backman
   RUNTIME DESTINATION bin
 )
+
+install(
+  FILES LICENSE.md
+  DESTINATION share/backman
+)
