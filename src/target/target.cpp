@@ -60,7 +60,7 @@ Target::Target(INI_Parser::INI_Section target_config) {
   std::vector<std::string>       end_hooks_arr = target_config["end_hook"];
   std::vector<std::string>        excludes_arr = target_config["exclude"];
   std::vector<std::string> elavate_program_arr = target_config["elavate_program"];
-  // std::vector<std::string>         tar_flags = target_config["add_tar_flag"];
+  std::vector<std::string>           tar_flags = target_config["add_tar_flag"];
 
   if (paths.size() != 1) {
     Logger::logf(Logger::ERROR, "path may only be defined once but defined %d times", paths.size());
@@ -130,7 +130,7 @@ Target::Target(INI_Parser::INI_Section target_config) {
       std::exit(1);
     }
   } else {
-    this->encrypt = false;
+    this->encrypt = this->elavated;
   }
 
   if (one_file_systems.size() > 1) {
@@ -157,22 +157,44 @@ Target::Target(INI_Parser::INI_Section target_config) {
     this->elavate_program = "su";
   }
 
-
-  for (size_t i = 0; i < before_hooks_arr.size(); i++) {
-    this->before_hooks.emplace_back(before_hooks_arr[i]);
-  }
-
-  for (size_t i = 0; i < end_hooks_arr.size(); i++) {
-    this->end_hooks.emplace_back(end_hooks_arr[i]);
-  }
-
   for (size_t i = 0; i < excludes_arr.size(); i++) {
     this->excludes.emplace_back(excludes_arr[i]);
   }
 
-  // for (size_t i = 0; i < tar_flags.size(); i++) {
-  //   this->tar_flags.push_back(tar_flags[i]);
-  // }
+  for (size_t i = 0; i < tar_flags.size(); i++) {
+    this->tar_flags.push_back(tar_flags[i]);
+  }
+
+
+  this->destfile = this->destdir / this->get_file_name();
+
+
+
+  for (size_t i = 0; i < before_hooks_arr.size(); i++) {
+    this->before_hooks.emplace_back(
+      "BACKMAN_TARGET_DESTFILE=\""
+      + this->destfile.generic_string()
+      + "\" BACKMAN_TARGET_NAME=\""
+      + this->name
+      + "\" BACKMAN_TARGET_DESTDIR=\""
+      + this->destdir.generic_string()
+      + "\""
+      + before_hooks_arr[i]
+    );
+  }
+
+  for (size_t i = 0; i < end_hooks_arr.size(); i++) {
+    this->end_hooks.emplace_back(
+      "BACKMAN_TARGET_DESTFILE=\""
+      + this->destfile.generic_string()
+      + "\" BACKMAN_TARGET_NAME=\""
+      + this->name
+      + "\" BACKMAN_TARGET_DESTDIR=\""
+      + this->destdir.generic_string()
+      + "\""
+      + end_hooks_arr[i]
+    );
+  }
 
 #ifndef NDEBUG
   std::string before_hooks_arr_str = "[";
@@ -218,7 +240,6 @@ Target::Target(INI_Parser::INI_Section target_config) {
     excludes_arr_str.c_str()
   );
 #endif
-
 }
 
 std::string Target::get_file_name() {
@@ -253,7 +274,6 @@ void Target::run_main() {
 
   std::vector<const char *> tar_command;
   std::vector<const char *> gpg_command;
-  fs::path                  destination_file_path = this->destdir / this->get_file_name();
 
   if (this->elavated) {
     tar_command.push_back(this->elavate_program.c_str());
@@ -276,10 +296,14 @@ void Target::run_main() {
     tar_command.push_back(exclude.c_str());
   }
 
+  for (std::string arg : this->tar_flags) {
+    tar_command.push_back(arg.c_str());
+  }
+
   tar_command.push_back(this->path.c_str());
   if (!encrypt) {
     tar_command.push_back("-f");
-    tar_command.push_back(destination_file_path.c_str());
+    tar_command.push_back(this->destfile.c_str());
   }
 
   tar_command.push_back(NULL);
@@ -299,7 +323,7 @@ void Target::run_main() {
   gpg_command.push_back("--cipher-algo");
   gpg_command.push_back("AES256");
   gpg_command.push_back("-o");
-  gpg_command.push_back(destination_file_path.c_str());
+  gpg_command.push_back(this->destfile.c_str());
   gpg_command.push_back(NULL);
 
 
@@ -395,13 +419,13 @@ void Target::set_passphrase() {
 
     std::string pass;
     std::string verify_pass;
-    std::printf("Passphrase for target \"%s\": ", name.c_str());
+    std::printf("Passphrase for target \"%s\": ", this->name.c_str());
     getline_noecho(std::cin, pass);
-    printf("\n");
+    std::printf("\n");
 
-    std::printf("Confirm passphrase for target \"%s\": ", name.c_str());
+    std::printf("Confirm passphrase for target \"%s\": ", this->name.c_str());
     getline_noecho(std::cin, verify_pass);
-    printf("\n");
+    std::printf("\n");
 
     if (pass != verify_pass) {
       std::printf("Passphrases don't match\n");

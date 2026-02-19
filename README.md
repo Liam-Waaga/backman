@@ -16,7 +16,7 @@ See the [example config](example_config.ini)
 - Not much error handling
 
 ## Planned Features for v0.2
-- Add support for custom tar flags
+- ~Add support for custom tar flags~ Complete
 - ~Support more than just xz compression~ Complete
 - Verbosity controls
 - --keep-going to continue past failures (well, currently it is 50/50 --keep-going and not, and there is no control)

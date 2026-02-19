@@ -70,6 +70,7 @@ class Target {
   bool                               elavated;
   std::string                        name;
   fs::path                           destdir;
+  fs::path                           destfile;
   std::string                        compress_program;
   bool                               encrypt;
   bool                               one_file_system;
@@ -84,10 +85,9 @@ class Target {
     bool failed = false;
   };
   std::vector<ProcExitStatusSimple>  children_status;
-  std::filesystem::path              old_path;
   std::string                        elavate_program;
 
-  // std::vector<std::string>           tar_flags;
+  std::vector<std::string>           tar_flags;
 
   static bool run_hooks(std::vector<SystemCommand> hooks);
   std::string get_file_name();
