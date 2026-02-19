@@ -15,12 +15,16 @@ See the [example config](example_config.ini)
 - The ini parser is ill fitted for anything but ascii, and has very little restrictions for ensuring sensible outputs
 - Not much error handling
 
+## Planned Features for v0.2
+- Add support for custom tar flags
+- Support more than just xz compression
+- Verbosity controls
+- --keep-going to continue past failures (well, currently it is 50/50 --keep-going and not, and there is no control)
+- Some general refactoring to make things easier
+
 ## Major TODO's
 - Rewrite the garbage code for running everything
-- Support more than just xz compression
-- Add support for custom tar flags
 - Abstract away argument parsing to a custom library
-- 
 
 ## Hopes and Dreams
 - Save file over ssh to remote or some other kind of saving to a remote
