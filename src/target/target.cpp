@@ -30,6 +30,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
+#include <exception>
 #include <filesystem>
 #include <thread>
 #include <unistd.h>
@@ -52,7 +53,6 @@ Target::Target(INI_Parser::INI_Section target_config) {
   std::vector<std::string>           elavateds = target_config["elavated"];
   std::vector<std::string>               names = target_config["name"];
   std::vector<std::string>               dests = target_config["dest"];
-  std::vector<std::string>     compress_levels = target_config["compress_level"];
   std::vector<std::string>   compress_programs = target_config["compress_program"];
   std::vector<std::string>            encrypts = target_config["encrypt"];
   std::vector<std::string>    one_file_systems = target_config["one_file_system"];
@@ -91,32 +91,23 @@ Target::Target(INI_Parser::INI_Section target_config) {
   }
 
   if (options.destdir != "") {
-    this->dest = options.destdir;
+    this->destdir = options.destdir;
   } else {
     if (dests.size() > 1) {
       Logger::logf(Logger::ERROR, "dest may only be defined once but defined %d times", dests.size());
       std::exit(1);
     } else if (dests.size() == 1) {
-      this->dest = resolve_path_with_environment(dests[0]);
+      this->destdir = resolve_path_with_environment(dests[0]);
     } else {
       if (parsed_config[0]["default_dest"].size() == 1)
-        this->dest = resolve_path_with_environment(parsed_config[0]["default_dest"][0]);
+        this->destdir = resolve_path_with_environment(parsed_config[0]["default_dest"][0]);
       else if (parsed_config[0]["default_dest"].size() > 1) {
         Logger::logf(Logger::ERROR, "default_dest may only be defined once but defined %d times", parsed_config[0]["default_dest"].size());
         std::exit(1);
       } else {
-        this->dest = resolve_path_with_environment("$HOME/Backups");
+        this->destdir = resolve_path_with_environment("$HOME/Backups");
       }
     }
-  }
-
-  if (compress_levels.size() > 1) {
-    Logger::logf(Logger::ERROR, "compress_level may only be defined once but defined %d times", compress_levels.size());
-    std::exit(1);
-  } else if (compress_levels.size() == 1) {
-    this->compress_level = compress_levels[0];
-  } else {
-    this->compress_level = "9e";
   }
 
   if (compress_programs.size() > 1) {
@@ -124,12 +115,8 @@ Target::Target(INI_Parser::INI_Section target_config) {
     std::exit(1);
   } else if (compress_programs.size() == 1) {
     this->compress_program = compress_programs[0];
-    if (this->compress_program != "xz") {
-      Logger::logf(Logger::ERROR, "only xz is supported as a compress program, not \"%s\"", this->compress_program.c_str());
-      std::exit(1);
-    }
   } else {
-    this->compress_program = "xz";
+    this->compress_program = "xz -9e --threads=0";
   }
 
   if (encrypts.size() > 1) {
@@ -142,7 +129,6 @@ Target::Target(INI_Parser::INI_Section target_config) {
       Logger::logf(Logger::ERROR, "invalid value \"%s\" for encrypt, must be bool", encrypts[0].c_str());
       std::exit(1);
     }
-
   } else {
     this->encrypt = false;
   }
@@ -163,7 +149,7 @@ Target::Target(INI_Parser::INI_Section target_config) {
   }
 
   if (elavate_program_arr.size() > 1) {
-    Logger::logf(Logger::ERROR, "compress_program may only be defined once but defined %d times", elavate_program_arr.size());
+    Logger::logf(Logger::ERROR, "elavate_program may only be defined once but defined %d times", elavate_program_arr.size());
     std::exit(1);
   } else if (elavate_program_arr.size() == 1) {
     this->elavate_program = elavate_program_arr[0];
@@ -260,111 +246,70 @@ void Target::run_main() {
     std::exit(1);
   }
 
-  size_t tar_command_arguments_count = 0;
 
   if (geteuid() == 0 || getegid() == 0) {
-    this->elavated = false; /* techinically true but we don't need to elavate so we set it to false so we don't later */
+    this->elavated = false; /* technically true but we don't need to elavate so we set it to false so we don't later */
   }
+
+  std::vector<const char *> tar_command;
+  std::vector<const char *> gpg_command;
+  fs::path                  destination_file_path = this->destdir / this->get_file_name();
 
   if (this->elavated) {
-    tar_command_arguments_count++; /* elavate_command */
-    tar_command_arguments_count++; /* -- */
+    tar_command.push_back(this->elavate_program.c_str());
+    tar_command.push_back("--");
   }
-  tar_command_arguments_count++; /* tar */
+  tar_command.push_back("tar");
   if (this->one_file_system) {
-    tar_command_arguments_count++; /* --one-file-system */
+    tar_command.push_back("--one-file-system");
   }
-  tar_command_arguments_count++; /* -cp */
-  tar_command_arguments_count++; /* --xattrs */
-  tar_command_arguments_count++; /* --acls */
-  /* we let tar take care of the compression program so that we don't have to deal with it */
-  tar_command_arguments_count++; /* -I */
-  tar_command_arguments_count++; /* compression program */
-  tar_command_arguments_count += this->excludes.size(); /* --exclude= */
-  if (!encrypt) {
-    tar_command_arguments_count++; /* -f */
-    tar_command_arguments_count++; /* dest */
-  }
-  tar_command_arguments_count++; /* path */
-  tar_command_arguments_count++; /* NULL */
+  tar_command.push_back("-cp");
+  tar_command.push_back("--xattrs");
+  tar_command.push_back("--acls");
+  tar_command.push_back("-I");
 
 
-  char const **tar_command = (char const**) malloc(sizeof(*tar_command) * tar_command_arguments_count);
-  char *destination_file_path = Logger::safe_format("%s/%s", this->dest.c_str(), this->get_file_name().c_str());
-
-  size_t tar_command_used = 0;
-  if (this->elavated) {
-    tar_command[tar_command_used++] = this->elavate_program.c_str();
-    tar_command[tar_command_used++] = "--";
-  }
-  tar_command[tar_command_used++] = "tar";
-  if (this->one_file_system) {
-    tar_command[tar_command_used++] = "--one-file-system";
-  }
-  tar_command[tar_command_used++] = "-cp";
-  tar_command[tar_command_used++] = "--xattrs";
-  tar_command[tar_command_used++] = "--acls";
-  tar_command[tar_command_used++] = "-I";
-
-  char *compress_command = Logger::safe_format("%s -%s --threads=0", this->compress_program.c_str(), this->compress_level.c_str());
-
-  tar_command[tar_command_used++] = compress_command;
-
-  char **exclude_args = (char **) malloc(sizeof(*exclude_args) * this->excludes.size());
+  tar_command.push_back(this->compress_program.c_str());
 
   for (size_t i = 0; i < this->excludes.size(); i++) {
-    exclude_args[i] = Logger::safe_format("--exclude=%s", excludes[i].c_str());
-    tar_command[tar_command_used++] = exclude_args[i];
+    std::string exclude = "--exclude=\"" + excludes[i].generic_string() + "\"";
+    tar_command.push_back(exclude.c_str());
   }
 
-  tar_command[tar_command_used++] = this->path.c_str();
+  tar_command.push_back(this->path.c_str());
   if (!encrypt) {
-    tar_command[tar_command_used++] = "-f";
-    tar_command[tar_command_used++] = destination_file_path;
+    tar_command.push_back("-f");
+    tar_command.push_back(destination_file_path.c_str());
   }
 
-  tar_command[tar_command_used++] = NULL;
+  tar_command.push_back(NULL);
   /* tar command constructed */
 
 
 
-  size_t gpg_command_arguments_count = 0;
-  gpg_command_arguments_count++; /* gpg */
-  gpg_command_arguments_count++; /* --batch */
-  gpg_command_arguments_count++; /* --yes */
-  gpg_command_arguments_count++; /* --pinentry-mode */
-  gpg_command_arguments_count++; /* loopback */
-  gpg_command_arguments_count++; /* --passphase-fd */
-  gpg_command_arguments_count++; /* `fd` */
-  gpg_command_arguments_count++; /* --symmetric */
-  gpg_command_arguments_count++; /* --cipher-algo */
-  gpg_command_arguments_count++; /* AES256 */
-  gpg_command_arguments_count++; /* -o */
-  gpg_command_arguments_count++; /* `destination_file_path` */
-  gpg_command_arguments_count++; /* NULL */
-
-  char const **gpg_command = (char const **) malloc(sizeof(*gpg_command) * gpg_command_arguments_count);
-
-  size_t gpg_command_used = 0;
-  gpg_command[gpg_command_used++] = "gpg";
-  gpg_command[gpg_command_used++] = "--batch";
-  gpg_command[gpg_command_used++] = "--yes";
-  gpg_command[gpg_command_used++] = "--pinentry-mode";
-  gpg_command[gpg_command_used++] = "loopback";
-  gpg_command[gpg_command_used++] = "--passphrase-fd";
-  size_t gpg_command_pwfd_index = gpg_command_used++;
-  gpg_command[gpg_command_pwfd_index] = "0"; /* Placeholder */
-  gpg_command[gpg_command_used++] = "--symmetric";
-  gpg_command[gpg_command_used++] = "--cipher-algo";
-  gpg_command[gpg_command_used++] = "AES256";
-  gpg_command[gpg_command_used++] = "-o";
-  gpg_command[gpg_command_used++] = destination_file_path;
-  gpg_command[gpg_command_used++] = NULL;
+  gpg_command.push_back("gpg");
+  gpg_command.push_back("--batch");
+  gpg_command.push_back("--yes");
+  gpg_command.push_back("--pinentry-mode");
+  gpg_command.push_back("loopback");
+  gpg_command.push_back("--passphrase-fd");
+  size_t gpg_command_pw_fd_index = gpg_command.size();
+  gpg_command.push_back("0");
+  gpg_command.push_back("--symmetric");
+  gpg_command.push_back("--cipher-algo");
+  gpg_command.push_back("AES256");
+  gpg_command.push_back("-o");
+  gpg_command.push_back(destination_file_path.c_str());
+  gpg_command.push_back(NULL);
 
 
-  fs::create_directories(this->dest);
+  try {
+    fs::create_directories(this->destdir);
+  } catch (const std::exception &e) {
+    Logger::logf(Logger::ERROR, "error creating destination directory (no permission?)\"%s\"", e.what());
+    std::exit(1);
+  }
 
-  this->old_path = fs::current_path();
 
   /* actually run the programs */
   if (this->encrypt) {
@@ -375,7 +320,7 @@ void Target::run_main() {
       close(tar_and_gpg_pipefds[0]); /* close read end */
       dup2(tar_and_gpg_pipefds[1], 1); /* redirect stdout to the pipe */
       close(tar_and_gpg_pipefds[1]);
-      execvp(tar_command[0], /* yolo cast */ (char *const *) tar_command);
+      execvp(tar_command[0], (char *const *) tar_command.data());
       Logger::log(Logger::ERROR, "execvp() failed");
       std::exit(1);
     }
@@ -395,13 +340,13 @@ void Target::run_main() {
     if (gpg_pid == 0) {
 
       close(passphrase_pipefds[1]); /* close write end */
-      gpg_command[gpg_command_pwfd_index] = Logger::safe_format("%d", passphrase_pipefds[0]);
-      /* no need to free because we immediately exec or exit in which case the resources are taken care of */
+      std::string pw_fd = std::to_string(passphrase_pipefds[0]);
+      gpg_command[gpg_command_pw_fd_index] = pw_fd.c_str();
 
       close(tar_and_gpg_pipefds[1]); /* close write end */
       dup2(tar_and_gpg_pipefds[0], 0); /* redirect pipe to stdin */
       close(tar_and_gpg_pipefds[0]);
-      execvp(gpg_command[0], (char * const *) gpg_command);
+      execvp(gpg_command[0], (char * const *) gpg_command.data());
       Logger::log(Logger::ERROR, "execvp() failed");
       kill(tar_pid, SIGTERM);
       std::exit(1);
@@ -430,7 +375,7 @@ void Target::run_main() {
     /* no encryption */
     pid_t tar_pid = fork();
     if (tar_pid == 0) {
-      execvp(tar_command[0], /* yolo cast */ (char *const *) tar_command);
+      execvp(tar_command[0], (char *const *) tar_command.data());
       Logger::log(Logger::ERROR, "execvp() failed");
       std::exit(1);
     }
@@ -442,17 +387,6 @@ void Target::run_main() {
       std::exit(1);
     }
   }
-
-
-  free(compress_command);
-  free(tar_command);
-  for (size_t i = 0; i < this->excludes.size(); i++) {
-    free(exclude_args[i]);
-  }
-  free(exclude_args);
-  free(destination_file_path);
-  free(gpg_command);
-
 }
 
 void Target::set_passphrase() {

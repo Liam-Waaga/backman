@@ -69,8 +69,7 @@ class Target {
   fs::path                           path;
   bool                               elavated;
   std::string                        name;
-  fs::path                           dest;
-  std::string                        compress_level;
+  fs::path                           destdir;
   std::string                        compress_program;
   bool                               encrypt;
   bool                               one_file_system;
