@@ -52,7 +52,7 @@ static constexpr char const * const help_format =
 "       --version         Display this help text (includes version)\n"
 "  -v,  --verbose         Increase verbocity (unimplemented)\n"
 "  -j,  --jobs    <jobs>  Number of jobs to use (for hooks)\n"
-"       --destdir <dir>   Destination directory to put the archives (overrides dest option for targets) (unimplemented)\n"
+"       --destdir <dir>   Destination directory to put the archives (overrides dest option for targets)\n"
 "  -c,  --config  <file>  Config file\n"
 "       --keep-going      Keep going after an errored target (unimplemented)\n"
 ;

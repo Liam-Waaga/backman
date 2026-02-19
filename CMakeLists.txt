@@ -26,7 +26,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
 
 
-add_compile_options(-Wall -Wextra -pedantic -Werror -fno-omit-frame-pointer)
+add_compile_options(-Wall -Wextra -pedantic -Werror -fno-omit-frame-pointer -Wno-unused-result)
 
 add_subdirectory(
   src
