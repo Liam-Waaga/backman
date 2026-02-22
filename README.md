@@ -1,6 +1,8 @@
 # Backman
 Simple backup manager written in c++
 
+Not ready for production use, despite me using it so
+
 ## Building
 ```$ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -B build```
 
