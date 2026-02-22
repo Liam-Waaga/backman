@@ -166,6 +166,9 @@ void parse_args(int argc, char **argv) {
 
 int main(int argc, char **argv) {
   options.config_file = resolve_path_with_environment("$XDG_CONFIG_HOME/backman/backman.ini");
+  if (std::string(std::getenv("XDG_CONFIG_HOME")) == "")
+    options.config_file = resolve_path_with_environment("$HOME/.config/backman/backman.ini");
+  
   parse_args(argc, argv);
 
 #ifndef NDEBUG
