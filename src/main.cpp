@@ -60,6 +60,10 @@ static constexpr char const * const help_format =
 
 /* i hate argument parsing */
 void parse_args(int argc, char **argv) {
+  if (argc == 1) {
+    std::printf(help_format, version_string);
+    std::exit(1);
+  }
   for (int i = 1; i < argc; i++) {
     std::string opt = argv[i];
     if (opt == "--help") {
