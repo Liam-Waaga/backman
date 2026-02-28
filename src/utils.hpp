@@ -35,6 +35,7 @@ struct Options {
   std::filesystem::path     destdir = "";
   bool                   keep_going = false;
   bool                  all_targets = false;
+  bool                print_targets = false;
   std::vector<std::string>  targets;
 };
 

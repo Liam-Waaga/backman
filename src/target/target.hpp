@@ -30,22 +30,21 @@
 #include <sys/types.h>
 #include <vector>
 
-namespace fs = std::filesystem;
-
 class Target {
   public:
 
   Target(INI_Parser::INI_Section target_config);
 
   /* begins execution of the target */
-  void        run_main();
-  void        wait_main();
-  bool        has_exited();
-  bool        run_before_hooks();
-  bool        run_end_hooks();
-  void        set_passphrase();
-  bool        is_encrypted();
-  std::string get_name();
+  void                  run_main();
+  void                  wait_main();
+  bool                  has_exited();
+  bool                  run_before_hooks();
+  bool                  run_end_hooks();
+  void                  set_passphrase();
+  bool                  is_encrypted();
+  std::string           get_name();
+  std::filesystem::path get_path();
 
   class SystemCommand {
     public:
@@ -66,11 +65,11 @@ class Target {
   };
 
   private:
-  fs::path                           path;
+  std::filesystem::path              path;
   bool                               elavated;
   std::string                        name;
-  fs::path                           destdir;
-  fs::path                           destfile;
+  std::filesystem::path              destdir;
+  std::filesystem::path              destfile;
   std::string                        compress_program;
   bool                               encrypt;
   bool                               one_file_system;

@@ -55,6 +55,7 @@ static constexpr char const * const help_format =
 "       --destdir <dir>   Destination directory to put the archives (overrides dest option for targets)\n"
 "  -c,  --config  <file>  Config file\n"
 "       --keep-going      Keep going after an errored target (unimplemented)\n"
+"       --print-targets   Print all available targets\n"
 ;
 
 
@@ -101,6 +102,8 @@ void parse_args(int argc, char **argv) {
       std::exit(1);
     } else if (opt == "--keep-going") {
       options.keep_going = true;
+    } else if (opt == "--print-targets") {
+      options.print_targets = true;
     } else {
       bool is_opt = false;
       bool accepts_arg = false;
@@ -210,6 +213,22 @@ int main(int argc, char **argv) {
       std::printf("Press enter to continue or ^C to stop: ");
       std::cin.get();
     }
+  }
+  if (options.print_targets) {
+    std::printf(
+      "Config file: %s\n",
+      options.config_file.c_str()
+    );
+    for (auto target : targets) {
+      std::printf(
+        "Name: %s\n"
+        "Path: %s\n"
+        "\n",
+        target.get_name().c_str(),
+        target.get_path().c_str()
+      );
+    }
+    std::exit(0);
   }
 
   if (options.all_targets && options.targets.size() > 1) {

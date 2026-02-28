@@ -43,6 +43,8 @@
 
 using namespace std::chrono_literals;
 
+namespace fs = std::filesystem;
+
 inline std::string toLower(std::string str) {
   std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){ return std::tolower(c); });
   return str;
@@ -461,6 +463,10 @@ void Target::wait_main() {
 
 std::string Target::get_name() {
   return this->name;
+}
+
+std::filesystem::path Target::get_path() {
+  return this->path;
 }
 
 bool Target::run_hooks(std::vector<Target::SystemCommand> hooks) {
