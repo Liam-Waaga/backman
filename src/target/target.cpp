@@ -247,8 +247,8 @@ std::string Target::get_file_name() {
   struct tm tm = *localtime(&t);
   char buff[128];
   strftime(buff, sizeof(buff), "%Y-%m-%d", &tm);
-  std::string ext = ".tar.";
-  ext += this->compress_program;
+  std::string ext = ".tar";
+  // ext += this->compress_program;
   if (this->encrypt) {
     ext += ".gpg";
   }
