@@ -291,11 +291,9 @@ void Target::run_main() {
 
   tar_command.push_back(this->compress_program.c_str());
 
-  std::vector<std::string> exclude_args;
-
   for (size_t i = 0; i < this->excludes.size(); i++) {
-    exclude_args.push_back("--exclude=\"" + excludes[i].generic_string() + "\"");
-    tar_command.push_back(exclude_args[i].c_str());
+    tar_command.push_back("--exclude");
+    tar_command.push_back(excludes[i].c_str());
   }
 
   for (std::string arg : this->tar_flags) {
