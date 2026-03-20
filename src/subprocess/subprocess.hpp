@@ -15,7 +15,7 @@ public:
 
   /* returns true if the executable */
   /* 1. exists */
-  /* 2. is executable */
+  /* 2. is executable by the current user */
   /* TODO: implement */
   bool set_executable(std::filesystem::path executable);
 

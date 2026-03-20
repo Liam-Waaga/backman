@@ -12,6 +12,9 @@ Subprocess::Subprocess(Subprocess &&other) {
   this->has_executed = std::move(other.has_executed);
   this->has_detached = std::move(other.has_detached);
   this->has_joined = std::move(other.has_joined);
+  this->pid = std::move(other.pid);
+  this->return_code = std::move(other.return_code);
+  this->kill_signal_code = std::move(other.kill_signal_code);
 }
 
 Subprocess::~Subprocess() {
