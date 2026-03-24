@@ -156,7 +156,7 @@ Target::Target(INI_Parser::INI_Section target_config) {
   } else if (elavate_program_arr.size() == 1) {
     this->elavate_program = elavate_program_arr[0];
   } else {
-    this->elavate_program = "su";
+    this->elavate_program = "sudo";
   }
 
   for (size_t i = 0; i < excludes_arr.size(); i++) {
@@ -334,6 +334,7 @@ void Target::run_main() {
     std::exit(1);
   }
 
+  chdir((this->destdir / "..").c_str());
 
   /* actually run the programs */
   if (this->encrypt) {
