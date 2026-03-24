@@ -240,8 +240,6 @@ Target::Target(INI_Parser::INI_Section target_config) {
     excludes_arr_str.c_str()
   );
 #endif
-  this->path = this->path.lexically_normal();
-  this->destdir = this->destdir.lexically_normal();
 }
 
 std::string Target::get_file_name() {
@@ -302,16 +300,11 @@ void Target::run_main() {
     tar_command.push_back(arg.c_str());
   }
 
+  tar_command.push_back(this->path.c_str());
   if (!encrypt) {
     tar_command.push_back("-f");
     tar_command.push_back(this->destfile.c_str());
   }
-  
-  tar_command.push_back("-C");
-  fs::path parent_dir = this->path / "..";
-  tar_command.push_back(parent_dir.c_str());
-  fs::path relative_dir = this->path.filename();
-  tar_command.push_back(relative_dir.c_str());
 
   tar_command.push_back(NULL);
   /* tar command constructed */
@@ -340,6 +333,8 @@ void Target::run_main() {
     Logger::logf(Logger::ERROR, "error creating destination directory (no permission?)\"%s\"", e.what());
     std::exit(1);
   }
+
+  chdir((this->destdir / "..").c_str());
 
   /* actually run the programs */
   if (this->encrypt) {
