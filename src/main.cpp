@@ -53,7 +53,7 @@ static constexpr char const * const help_format =
 "  -v,  --verbose         Increase verbocity (unimplemented)\n"
 "  -j,  --jobs    <jobs>  Number of jobs to use (for hooks)\n"
 "       --destdir <dir>   Destination directory to put the archives (overrides dest option for targets)\n"
-"  -c,  --config  <file>  Config file\n"
+"  -c,  --config  <file>  Config file, default $XDG_CONFIG_HOME/backman/backman.ini\n"
 "       --keep-going      Keep going after an errored target (unimplemented)\n"
 "       --print-targets   Print all available targets\n"
 ;
