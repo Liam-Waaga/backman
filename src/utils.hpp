@@ -37,6 +37,7 @@ struct Options {
   bool                  all_targets = false;
   bool                print_targets = false;
   std::vector<std::string>  targets;
+  bool             generate_example = false;
 };
 
 extern Options options;

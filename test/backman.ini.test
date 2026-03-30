@@ -1,0 +1,14 @@
+#default backup file destination (for convenience sake)
+default_dest = /home/user/Backups
+
+[target]
+path = /home/user
+name = home
+encrypt = true
+exclude = /home/user/Backups
+
+[target]
+path = /
+name = root
+encrypt = true
+exclude = /home

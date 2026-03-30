@@ -30,7 +30,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
+#include <ios>
 #include <stddef.h>
+#include <format>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -56,6 +59,9 @@ static constexpr char const * const help_format =
 "  -c,  --config  <file>  Config file, default $XDG_CONFIG_HOME/backman/backman.ini\n"
 "       --keep-going      Keep going after an errored target (unimplemented)\n"
 "       --print-targets   Print all available targets\n"
+"       --generate-config\n"
+"                         Generate an example config (for reference)\n"
+"                         If a config file path is specified, that path is used instead\n"
 ;
 
 
@@ -104,6 +110,8 @@ void parse_args(int argc, char **argv) {
       options.keep_going = true;
     } else if (opt == "--print-targets") {
       options.print_targets = true;
+    } else if (opt == "--generate-config") {
+      options.generate_example = true;
     } else {
       bool is_opt = false;
       bool accepts_arg = false;
@@ -170,6 +178,41 @@ void parse_args(int argc, char **argv) {
   }
 }
 
+void generate_example_config() {
+  while (std::filesystem::exists(options.config_file)) {
+    options.config_file.append(".example");
+  }
+  constexpr const char * config_file_format =
+    "#default backup file destination (for convenience sake)\n"
+    "default_dest = {}\n"
+    "\n"
+    "[target]\n"
+    "path = {}\n"
+    "name = home\n"
+    "encrypt = true\n"
+    "exclude = {}\n"
+    "\n"
+    "[target]\n"
+    "path = /\n"
+    "name = root\n"
+    "encrypt = true\n"
+    "exclude = /home\n"
+  ;
+  fs::path home_dir = getenv("HOME");
+  fs::path backup_dir = home_dir / "Backups";
+  std::string config_file_contents = std::format(config_file_format, backup_dir.string(), home_dir.string(), backup_dir.string());
+
+  std::fstream config_file{options.config_file, std::fstream::out};
+  config_file << config_file_contents;
+
+#ifndef NDEBUG
+  std::printf("%s", config_file_contents.c_str());
+#endif
+
+  config_file.close();
+
+  std::exit(options.targets.size() > 0);
+}
 
 int main(int argc, char **argv) {
   options.config_file = resolve_path_with_environment("$XDG_CONFIG_HOME/backman/backman.ini");
@@ -193,6 +236,9 @@ int main(int argc, char **argv) {
   );
 #endif
 
+  if (options.generate_example) {
+    generate_example_config();
+  }
 
 
   if (fs::exists(options.config_file)) {
@@ -244,6 +290,7 @@ int main(int argc, char **argv) {
       }
     }
   }
+
 
   for (size_t i = 0; i < targets.size(); i++) {
     for (size_t j = 0; j < options.targets.size(); j++) {
