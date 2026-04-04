@@ -64,6 +64,11 @@ static constexpr char const * const help_format =
 "                         If a config file path is specified, that path is used instead\n"
 ;
 
+inline std::string toLower(std::string str) {
+  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){ return std::tolower(c); });
+  return str;
+}
+
 
 /* i hate argument parsing */
 void parse_args(int argc, char **argv) {
@@ -185,6 +190,7 @@ void generate_example_config() {
   constexpr const char * config_file_format =
     "#default backup file destination (for convenience sake)\n"
     "default_dest = {}\n"
+    "same_passowrd = true\n"
     "\n"
     "[target]\n"
     "path = {}\n"
@@ -251,7 +257,30 @@ int main(int argc, char **argv) {
   std::vector<Target> targets;
   for (INI_Parser::INI_Section section : parsed_config) {
     if (section.get_section_name() == "") {
-      /* handle global section */
+
+      if (parsed_config[0]["default_dest"].size() == 1)
+        options.destdir = resolve_path_with_environment(parsed_config[0]["default_dest"][0]);
+      else if (parsed_config[0]["default_dest"].size() > 1) {
+        Logger::logf(Logger::ERROR, "default_dest may only be defined once but defined %d times", parsed_config[0]["default_dest"].size());
+        std::exit(1);
+      } else {
+        options.destdir = resolve_path_with_environment("$HOME/Backups");
+      }
+
+      if (parsed_config[0]["same_password"].size() == 1) {
+        std::string val = toLower(parsed_config[0]["same_password"][0]);
+        if (val == "true" || val == "false") {
+          options.same_password = val == "true";
+        } else {
+          Logger::logf(Logger::ERROR, "same_password expects a bool (true or false), not \"%s\"", parsed_config[0]["same_password"][0].c_str());
+          std::exit(1);
+        }
+      } else {
+        Logger::log(Logger::ERROR, "same_password defined multiple times");
+        std::exit(1);
+      }
+
+
     } else if (section.get_section_name() == "target") {
       targets.emplace_back(section);
     } else {

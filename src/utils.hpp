@@ -38,6 +38,7 @@ struct Options {
   bool                print_targets = false;
   std::vector<std::string>  targets;
   bool             generate_example = false;
+  bool                same_password = false;
 };
 
 extern Options options;

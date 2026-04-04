@@ -91,4 +91,7 @@ class Target {
   static bool run_hooks(std::vector<SystemCommand> hooks);
   std::string get_file_name();
 
+  static std::string global_pw;
+  static bool has_gotten_pw;
+
 };
