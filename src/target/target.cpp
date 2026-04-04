@@ -433,7 +433,7 @@ void Target::run_main() {
 
 void Target::set_passphrase() {
   if (this->is_encrypted()) {
-    if (Target::has_gotten_pw) {
+    if (options.same_password && Target::has_gotten_pw) {
       this->passphrase = Target::global_pw;
       return;
     }
@@ -442,16 +442,16 @@ void Target::set_passphrase() {
     std::string pass;
     std::string verify_pass;
     if (options.same_password)
-      std::printf("Passphrase for target \"%s\": ", this->name.c_str());
-    else
       std::printf("Passphrase: ");
+    else
+      std::printf("Passphrase for target \"%s\": ", this->name.c_str());
     getline_noecho(std::cin, pass);
     std::printf("\n");
 
     if (options.same_password)
-      std::printf("Confirm passphrase for target \"%s\": ", this->name.c_str());
-    else
       std::printf("Confirm passphrase: ");
+    else
+      std::printf("Confirm passphrase for target \"%s\": ", this->name.c_str());
     getline_noecho(std::cin, verify_pass);
     std::printf("\n");
 
