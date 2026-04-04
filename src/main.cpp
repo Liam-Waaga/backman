@@ -31,7 +31,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
-#include <ios>
 #include <stddef.h>
 #include <format>
 #include <string>
@@ -347,9 +346,12 @@ int main(int argc, char **argv) {
 
 
   for (auto target : targets) {
+    std::printf("Running %s before hooks\n", target.get_name().c_str());
     target.run_before_hooks();
+    std::printf("Running %s\n", target.get_name().c_str());
     target.run_main();
     target.wait_main();
+    std::printf("Running %s end hooks\n", target.get_name().c_str());
     target.run_end_hooks();
   }
 }
