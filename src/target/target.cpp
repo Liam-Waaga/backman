@@ -45,6 +45,10 @@ using namespace std::chrono_literals;
 
 namespace fs = std::filesystem;
 
+std::string Target::global_pw{""};
+bool Target::has_gotten_pw{false};
+
+
 inline std::string toLower(std::string str) {
   std::transform(str.begin(), str.end(), str.begin(),
                  [](unsigned char c) { return std::tolower(c); });
