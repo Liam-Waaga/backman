@@ -145,6 +145,9 @@ Target::Target(INI_Parser::INI_Section target_config) {
     this->compress_program = compress_programs[0];
   } else {
     this->compress_program = "zstd --adapt -T0";
+    if (options.verbosity > 0) {
+      this->compress_program += " -v";
+    }
   }
 
   if (encrypts.size() > 1) {
